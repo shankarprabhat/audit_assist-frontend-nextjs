@@ -14,7 +14,8 @@ export default function Home() {
     setError(null);
 
     try {
-      const response = await fetch('http://127.0.0.1:5000/api/compliance', {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL; // Get the API URL from environment
+      const response = await fetch(apiUrl, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
