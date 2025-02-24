@@ -64,7 +64,7 @@ export default function Home() {
     reader.readAsArrayBuffer(file);
   };
 
-  const handleGenerateReport = async () => {
+  const handleGenerateReport = async () => {  
     try {
       const response = await fetch('/docs/Audit Observations-Output.xlsx'); // Fetch the Excel file
       const data = await response.arrayBuffer();
@@ -124,25 +124,59 @@ export default function Home() {
               <h4>Please Share the Auditors Observations</h4>
             </div>
 
-            <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} />
-            {excelData && (
-              <div className="mt-4">
-                <h4 className="text-lg font-semibold mb-2">Excel Preview:</h4>
-                <table className="w-full border-collapse table-auto">
-                  <tbody>
-                    {excelData.map((row, rowIndex) => (
-                      <tr key={rowIndex}>
-                        {row.map((cell, cellIndex) => (
-                          <td key={cellIndex} className="border px-4 py-2">
-                            {cell}
-                          </td>
+            <div className="flex items-center">
+              <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} />
+              <button
+                onClick={handleGenerateReport}
+                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-4"
+              >
+                Generate Report
+              </button>
+            </div>
+            
+            <div className="flex mt-4"> {/* Split screen */}
+              <div className="w-1/2 pr-4"> {/* Left side */}
+                {excelData && (
+                  <div className="mt-4">
+                    <h4 className="text-lg font-semibold mb-2">Excel Preview:</h4>
+                    <table className="w-full border-collapse table-auto">
+                      <tbody>
+                        {excelData.map((row, rowIndex) => (
+                          <tr key={rowIndex}>
+                            {row.map((cell, cellIndex) => (
+                              <td key={cellIndex} className="border px-4 py-2">
+                                {cell}
+                              </td>
+                            ))}
+                          </tr>
                         ))}
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
+                      </tbody>
+                    </table>
+                  </div>
+                )}
               </div>
-            )}
+              
+              <div className="w-1/2 pl-4"> {/* Right side */}  
+                {reportData && (
+                  <div className="mt-4">
+                    <h4 className="text-lg font-semibold mb-2">Generated Report:</h4>
+                    <table className="w-full border-collapse table-auto">
+                      <tbody>
+                        {reportData.map((row, rowIndex) => (
+                          <tr key={rowIndex}>
+                            {row.map((cell, cellIndex) => (
+                              <td key={cellIndex} className="border px-4 py-2">
+                                {cell}
+                              </td>
+                            ))}
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </div>
+            </div>
           </div>
         )}
 
