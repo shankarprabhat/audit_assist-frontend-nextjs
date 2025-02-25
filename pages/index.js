@@ -3,6 +3,7 @@ import Navigation from '../components/Navigation';
 import UserTable from '../components/UserTable';
 import PdfPreview from '../components/PdfPreview';
 import * as XLSX from 'xlsx'; // Import xlsx
+import Logo from '../components/Logo'; // Adjust the path as needed
 
 export default function Home() {
   const [selectedPdf, setSelectedPdf] = useState(null);
@@ -85,9 +86,11 @@ export default function Home() {
 
       <main className="container mx-auto p-8">
         <div className="mt-16 text-center">
+        <Logo />
           <h2 className="text-4xl font-extrabold text-gray-900 sm:text-5xl md:text-6xl leading-tight">
             Welcome to Audit Assist
           </h2>
+          
           <p className="mt-6 text-xl text-gray-700 max-w-3xl mx-auto">
             AI Driven Insights into Documents and Data!.
           </p>
