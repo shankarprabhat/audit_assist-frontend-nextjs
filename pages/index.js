@@ -1,18 +1,35 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import Navigation from '../components/Navigation';
 import UserTable from '../components/UserTable';
 import PdfPreview from '../components/PdfPreview';
-import * as XLSX from 'xlsx'; // Import xlsx
-import Logo from '../components/Logo'; // Adjust the path as needed
+import * as XLSX from 'xlsx';
+import Logo from '../components/Logo';
 
 export default function Home() {
-  const [selectedPdf, setSelectedPdf] = useState(null);
-  const [complianceData, setComplianceData] = useState(null);
+  const [activeTab, setActiveTab] = useState('Audit Observation to Finding');
+  
+  // States for the new "Audit Observation to Finding" tab
+  const [auditObs, setAuditObs] = useState('');
+  const [gxpCategory, setGxpCategory] = useState('Good Clinical Practice (GCP)');
+  const [manualContext, setManualContext] = useState({
+    regulatoryGuideline: { documentId: "", sectionId: "", subsectionId: "", contentId: "" },
+    protocolGuideline: { documentId: "", sectionId: "", subsectionId: "", contentId: "" }
+  });
+  const [findingOutput, setFindingOutput] = useState(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [activeTab, setActiveTab] = useState('Audit Insights'); // Added state for active tab
-  const [excelData, setExcelData] = useState(null);
-  const [reportData, setReportData] = useState(null);
+
+  // Existing states from your previous version
+  const [selectedPdf, setSelectedPdf] = useState(null);
+  const [complianceData, setComplianceData] = useState(null);
+  const [auditObservations, setAuditObservations] = useState('');
+  const [regulatoryGuideline, setRegulatoryGuideline] = useState('');
+  const [regulatoryContentId, setRegulatoryContentId] = useState('');
+  const [protocolGuideline, setProtocolGuideline] = useState('');
+  const [protocolContentId, setProtocolContentId] = useState('');
+  const [auditFindings, setAuditFindings] = useState(null);
+  const [auditLoading, setAuditLoading] = useState(false);
+  const [auditError, setAuditError] = useState(null);
 
   const handleViewCompliance = async () => {
     setLoading(true);
@@ -80,109 +97,217 @@ export default function Home() {
     }
   };
 
+  const handleGenerateAuditFindings = async () => {
+    setAuditLoading(true);
+    setAuditError(null);
+    setAuditFindings(null);
+
+    try {
+      const baseUrl = process.env.NEXT_PUBLIC_API_BASE_URL || 'https://zzqi5gvfxr.ap-south-1.awsapprunner.com';
+      // const payload = {
+      //   auditObservation: auditObservations || undefined,
+      //   manualContext['regulatoryGuideline']['documentId']: regulatoryGuideline || undefined,
+      //   manualContext['protocolGuideline']['documentId']: protocolGuideline || undefined,
+      //   // regulatoryGuideline: regulatoryGuideline || undefined,
+      //   // regulatoryContentId: regulatoryContentId || undefined,
+      //   // protocolGuideline: protocolGuideline || undefined,
+      //   // protocolContentId: protocolContentId || undefined,
+      // };
+
+      const payload = {
+        auditObservation: auditObservations || undefined,
+        // gxpCategories: gxpCategories || [], // Assuming gxpCategories is an array
+
+        // Create the 'manualContext' object
+        manualContext: {          
+          // Create the 'regulatoryGuideline' object inside manualContext
+          regulatoryGuideline: {
+            documentId: regulatoryGuideline || "", // Using your variable
+            sectionId: "", // Hardcoded as per your example
+            subsectionId: "", // Hardcoded as per your example
+            contentId: regulatoryContentId || "", // From your commented code
+          },
+
+          // Create the 'protocolGuideline' object inside manualContext
+          protocolGuideline: {
+            documentId: protocolGuideline || "", // Using your variable
+            sectionId: "", // Hardcoded as per your example
+            subsectionId: "", // Hardcoded as per your example
+            contentId: protocolContentId || "", // From your commented code
+            },
+          },
+        };
+
+      const response = await fetch(`${baseUrl}/generate-audit-findings`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json();
+        console.error("Validation Error:", errorData);
+        throw new Error(`${response.status} - ${errorData.error || response.statusText}`);
+      }
+
+      const data = await response.json();
+      setAuditFindings(data);
+    } catch (err) {
+      console.error('Error generating audit findings:', err);
+      setAuditError(err.message);
+    } finally {
+      setAuditLoading(false);
+    }
+  };
+
+
+  const handleContextChange = (type, field, value) => {
+    setManualContext(prev => ({
+      ...prev,
+      [type]: { ...prev[type], [field]: value }
+    }));
+  };
+
+  const handleGenerateFinding = async () => {
+    setLoading(true);
+    setError(null);
+    setFindingOutput(null);
+
+    const payload = {
+      auditObservation: auditObs,
+      gxpCategories: [gxpCategory],
+      manualContext: manualContext
+    };
+
+    try {
+      // Using your specific AWS URL variable
+      const baseUrl = process.env.NEXT_PUBLIC_MY_AWS_URL || 'https://zzqi5gvfxr.ap-south-1.awsapprunner.com';
+      const response = await fetch(`${baseUrl}/generate-audit-findings`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      if (!response.ok) throw new Error(`Error: ${response.status}`);
+      
+      const data = await response.json();
+      // Accessing the nested aiGeneratedFinding based on your JSON structure
+      setFindingOutput(data.response?.aiGeneratedFinding || data.aiGeneratedFinding);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   return (
     <div>
       <Navigation />
-
       <main className="container mx-auto p-8">
         <div className="mt-16 text-center">
-        <Logo />
-          <h2 className="text-4xl font-extrabold text-gray-900 sm:text-5xl md:text-6xl leading-tight">
-            Welcome to Audit Assist
-          </h2>
-          
-          <p className="mt-6 text-xl text-gray-700 max-w-3xl mx-auto">
-            AI Driven Insights into Documents and Data!.
-          </p>
+          <Logo />
+          <h2 className="text-4xl font-extrabold text-gray-900">Audit Assist</h2>
         </div>
 
-        {/* Vertical Tabs */}
-        <div className="flex justify-center mt-8">
-          <button
-            onClick={() => handleTabClick('Audit Insights')}
-            className={`px-4 py-2 rounded-l ${
-              activeTab === 'Audit Insights' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-            }`}
-          >
-            Audit Insights
-          </button>
-
-          <button
-            onClick={() => handleTabClick('Training Insights')}
-            className={`px-4 py-2 rounded-r ${
-              activeTab === 'Training Insights' ? 'bg-blue-500 text-white' : 'bg-gray-200 text-gray-700'
-            }`}
-          >
-            Training Insights
-          </button>
+        {/* Updated Tab Navigation */}
+        <div className="flex justify-center mt-8 mb-10">
+          {['Audit Observation to Finding', 'Training Insights'].map((tab) => (
+            <button
+              key={tab}
+              onClick={() => setActiveTab(tab)}
+              className={`px-6 py-2 border ${activeTab === tab ? 'bg-blue-600 text-white' : 'bg-gray-100 text-gray-700'}`}
+            >
+              {tab}
+            </button>
+          ))}
         </div>
 
-        {/* Content based on active tab */}        
-        {activeTab === 'Audit Insights' && (
-          <div>
-            <div>
-              <h3 className="text-xl font-semibold mb-4">
-                Generate Audit Reports based on Auditors Observations!
-              </h3>
-              <h4>Please Share the Auditors Observations</h4>
-            </div>
-
-            <div className="flex items-center">
-              <input type="file" accept=".xlsx, .xls" onChange={handleFileUpload} />
-              <button
-                onClick={handleGenerateReport}
-                className="bg-blue-500 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded ml-4"
-              >
-                Generate Report
-              </button>
-            </div>
-            
-            <div className="flex mt-4"> {/* Split screen */}
-              <div className="w-1/2 pr-4"> {/* Left side */}
-                {excelData && (
-                  <div className="mt-4">
-                    <h4 className="text-lg font-semibold mb-2">Excel Preview:</h4>
-                    <table className="w-full border-collapse table-auto">
-                      <tbody>
-                        {excelData.map((row, rowIndex) => (
-                          <tr key={rowIndex}>
-                            {row.map((cell, cellIndex) => (
-                              <td key={cellIndex} className="border px-4 py-2">
-                                {cell}
-                              </td>
-                            ))}
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                )}
-              </div>
+        {activeTab === 'Audit Observation to Finding' && (
+          <div className="max-w-7xl mx-auto"> 
+            {/* Parent Grid Container */}
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 items-start">
               
-              <div className="w-1/2 pl-4"> {/* Right side */}  
-                {reportData && (
-                  <div className="mt-4">
-                    <h4 className="text-lg font-semibold mb-2">Generated Report:</h4>
-                    <table className="w-full border-collapse table-auto">
-                      <tbody>
-                        {reportData.map((row, rowIndex) => (
-                          <tr key={rowIndex}>
-                            {row.map((cell, cellIndex) => (
-                              <td key={cellIndex} className="border px-4 py-2">
-                                {cell}
-                              </td>
-                            ))}
-                          </tr>
+              {/* Left Column: Input Form */}
+              <div className="bg-white p-6 shadow-lg rounded-lg border">
+                <label className="block font-bold mb-2 text-gray-700">Audit Observation</label>
+                <textarea 
+                  className="w-full p-3 border rounded mb-4 focus:ring-2 focus:ring-blue-500 outline-none" 
+                  rows="5"
+                  value={auditObs}
+                  onChange={(e) => setAuditObs(e.target.value)}
+                  placeholder="Enter observation..."
+                />
+
+                <label className="block font-bold mb-2 text-gray-700">GxP Category</label>
+                <select 
+                  className="w-full p-2 border rounded mb-6 bg-white"
+                  value={gxpCategory}
+                  onChange={(e) => setGxpCategory(e.target.value)}
+                >
+                  <option>Good Clinical Practice (GCP)</option>
+                  <option>Data Integrity</option>
+                  <option>Good Manufacturing Practice (GMP)</option>
+                </select>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-6">
+                  {['regulatoryGuideline', 'protocolGuideline'].map((type) => (
+                    <div key={type} className="p-4 bg-gray-50 rounded border">
+                      <h3 className="font-bold mb-3 uppercase text-[10px] text-gray-500 tracking-wider">
+                        {type.replace('G', ' G')}
+                      </h3>
+                      <div className="space-y-2">
+                        {['documentId', 'sectionId', 'subsectionId', 'contentId'].map((field) => (
+                          <input
+                            key={field}
+                            placeholder={field}
+                            className="w-full p-2 text-xs border rounded bg-white"
+                            value={manualContext[type][field]}
+                            onChange={(e) => handleContextChange(type, field, e.target.value)}
+                          />
                         ))}
-                      </tbody>
-                    </table>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                <button 
+                  onClick={handleGenerateFinding}
+                  disabled={loading || !auditObs}
+                  className="w-full bg-blue-600 text-white py-3 rounded-md font-bold hover:bg-blue-700 disabled:bg-gray-400 transition-colors"
+                >
+                  {loading ? 'Processing Findings...' : 'Generate Finding'}
+                </button>
+                
+                {error && <div className="mt-4 p-4 bg-red-100 text-red-700 rounded text-sm">{error}</div>}
+              </div>
+
+              {/* Right Column: Results Display */}
+              <div className="space-y-4">
+                {findingOutput ? (
+                  <div className="bg-green-50 p-6 border-l-4 border-green-500 rounded shadow-lg sticky top-8">
+                    <h3 className="text-lg font-bold mb-4 text-green-800 flex items-center">
+                      <span className="mr-2">✨</span> AI Generated Finding
+                    </h3>
+                    <p className="whitespace-pre-wrap text-gray-800 leading-relaxed text-sm">
+                      {findingOutput}
+                    </p>
+                  </div>
+                ) : (
+                  <div className="border-2 border-dashed border-gray-200 rounded-lg p-12 text-center text-gray-400 sticky top-8">
+                    <p>Generated findings will appear here after submission.</p>
                   </div>
                 )}
               </div>
+
             </div>
           </div>
         )}
 
+
+
+        {/* Placeholder for other tabs based on your previous code */}
         {activeTab === 'Training Insights' && (
           <div>
             <div>
@@ -240,9 +365,9 @@ export default function Home() {
           {complianceData && complianceData.length === 0 && (
             <p>No compliance data available.</p>
           )}
-          </div>       
-        )}
-      </main>
+          </div>  
+          )}
+    </main>
     </div>
   );
 }

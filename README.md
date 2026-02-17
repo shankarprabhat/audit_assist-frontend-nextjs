@@ -2,8 +2,6 @@
 
 Nextjs code for the frontend of Audit Assist
 
-
-
 How to run
 
 `npm run dev`
